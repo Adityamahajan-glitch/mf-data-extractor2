@@ -40,20 +40,25 @@ def fetch_amfi_data(start_date_str, end_date_str):
             if j == len(lines) - 1:
                 break
             if split[0] == "":
-                if lines[j] == lines[j + 1]:
-                    sch_cat = lines[j - 1].split("(")
-                    sch_cat[-1] = sch_cat[-1][:-2].strip()
-                    sch_cat = [s.strip() for s in sch_cat]
-                    if len(sch_cat) > 1 and "-" in sch_cat[1]:
-    sub = sch_cat[1].split("-")
-    sch_cat.pop(-1)
-    sch_cat += [s.strip() for s in sub]
-else:
-    if len(sch_cat) == 1:
-        sch_cat += ["", ""]
-    elif len(sch_cat) == 2:
-        sch_cat.append("")
-Structure, Category, Sub_Category = sch_cat[:3]
+    if lines[j] == lines[j + 1]:
+        sch_cat = lines[j - 1].split("(")
+        sch_cat[-1] = sch_cat[-1][:-2].strip()
+        sch_cat = [s.strip() for s in sch_cat]
+
+        if len(sch_cat) > 1 and "-" in sch_cat[1]:
+            sub = sch_cat[1].split("-")
+            sch_cat.pop(-1)
+            sch_cat += [s.strip() for s in sub]
+        else:
+            if len(sch_cat) == 1:
+                sch_cat += ["", ""]
+            elif len(sch_cat) == 2:
+                sch_cat.append("")
+
+        Structure, Category, Sub_Category = sch_cat[:3]
+    elif "Mutual Fund" in lines[j + 1]:
+        amc = lines[j + 1]
+
 
                 elif "Mutual Fund" in lines[j + 1]:
                     amc = lines[j + 1]
