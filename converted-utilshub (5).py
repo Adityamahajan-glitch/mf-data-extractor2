@@ -84,7 +84,7 @@ def login_page():
         if password == "MF_Nav2025":
             st.session_state.authenticated = True
             st.success("✅ Login successful")
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("❌ Incorrect password")
 # === Main App ===
