@@ -89,7 +89,7 @@ with st.sidebar:
     end_date = st.date_input("Fetch To Date", datetime(2025, 6, 30))
     chart_type = st.radio("Chart Type", ["Line Chart", "Renko Chart"])
     renko_method = st.selectbox("Renko Brick Type", ["ATR(14)*1.5", "0.5%", "1%", "2%"])
-    if st.button("\ud83d\udcc5 Fetch Data"):
+   if st.button("📅 Fetch Data"):
         with st.spinner("Fetching data from AMFI..."):
             df_nav = fetch_amfi_data(start_date.strftime('%d-%b-%Y'), end_date.strftime('%d-%b-%Y'))
             if df_nav.empty:
