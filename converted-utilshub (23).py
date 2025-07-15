@@ -82,7 +82,7 @@ def fetch_amfi_data(start_date_str, end_date_str):
     return pd.DataFrame(nav_list)
 # === UI ===
 st.set_page_config(page_title="AMFI NAV Dashboard", layout="wide")
-st.title("\ud83d\udcca AMFI Mutual Fund NAV Dashboard")
+st.title("📊 AMFI Mutual Fund NAV Dashboard")
 st.markdown("Created using **Streamlit** | Data Source: [AMFI India](https://www.amfiindia.com/net-asset-value/nav-history)")
 with st.sidebar:
     start_date = st.date_input("Fetch From Date", datetime(2025, 4, 1))
