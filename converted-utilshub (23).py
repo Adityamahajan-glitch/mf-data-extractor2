@@ -9,9 +9,11 @@ from pytz import utc
 import plotly.graph_objects as go
 from stocktrends import Renko
 from ta.volatility import AverageTrueRange
+
 # === Helper Functions ===
 def convert_date_to_utc_datetime(date_string):
     return datetime.strptime(date_string, "%d-%b-%Y").replace(tzinfo=utc)
+
 def split_date_range(start_date_str, end_date_str, max_duration=90):
     start_date = datetime.strptime(start_date_str, "%d-%b-%Y")
     end_date = datetime.strptime(end_date_str, "%d-%b-%Y")
@@ -22,6 +24,7 @@ def split_date_range(start_date_str, end_date_str, max_duration=90):
         ranges.append((current, chunk_end))
         current = chunk_end + timedelta(days=1)
     return ranges
+
 def fetch_amfi_data(start_date_str, end_date_str):
     nav_list = []
     chunks = split_date_range(start_date_str, end_date_str)
@@ -80,23 +83,26 @@ def fetch_amfi_data(start_date_str, end_date_str):
             j += 1
         progress.progress((i + 1) / total, text=f"Fetched {i + 1}/{total} chunks...")
     return pd.DataFrame(nav_list)
+
 # === UI ===
 st.set_page_config(page_title="AMFI NAV Dashboard", layout="wide")
 st.title("📊 AMFI Mutual Fund NAV Dashboard")
 st.markdown("Created using **Streamlit** | Data Source: [AMFI India](https://www.amfiindia.com/net-asset-value/nav-history)")
+
 with st.sidebar:
     start_date = st.date_input("Fetch From Date", datetime(2025, 4, 1))
     end_date = st.date_input("Fetch To Date", datetime(2025, 6, 30))
     chart_type = st.radio("Chart Type", ["Line Chart", "Renko Chart"])
     renko_method = st.selectbox("Renko Brick Type", ["ATR(14)*1.5", "0.5%", "1%", "2%"])
-   if st.button("📅 Fetch Data"):
+    if st.button("📅 Fetch Data"):
         with st.spinner("Fetching data from AMFI..."):
             df_nav = fetch_amfi_data(start_date.strftime('%d-%b-%Y'), end_date.strftime('%d-%b-%Y'))
             if df_nav.empty:
-                st.error("\u274c No data returned from AMFI.")
+                st.error("❌ No data returned from AMFI.")
             else:
                 st.session_state["df_nav"] = df_nav
-                st.success(f"\u2705 Loaded {len(df_nav)} records.")
+                st.success(f"✅ Loaded {len(df_nav)} records.")
+
 if "df_nav" in st.session_state:
     df_nav = st.session_state["df_nav"]
     selected_amc = st.selectbox("Select AMC", sorted(df_nav["AMC"].dropna().unique()))
@@ -110,43 +116,33 @@ if "df_nav" in st.session_state:
         f_date = st.date_input("From Date", min_date)
     with col2:
         t_date = st.date_input("To Date", max_date)
-    filtered_df = filtered_df[
-        (filtered_df["Date"].dt.date >= f_date) & (filtered_df["Date"].dt.date <= t_date)
-    ].copy()
-    df_plot = filtered_df.copy()
-    df_plot = df_plot.sort_values("Date")
+    filtered_df = filtered_df[(filtered_df["Date"].dt.date >= f_date) & (filtered_df["Date"].dt.date <= t_date)].copy()
+
+    df_plot = filtered_df.copy().sort_values("Date")
     df_plot["RSI_14"] = RSIIndicator(close=df_plot["NAV"], window=14).rsi()
     df_plot["RSI_Premier"] = df_plot["RSI_14"].ewm(span=5, adjust=False).mean()
     macd = MACD(close=df_plot["NAV"], window_slow=26, window_fast=12, window_sign=9)
     df_plot["MACD"] = macd.macd()
     df_plot["Signal"] = macd.macd_signal()
+
     sma1 = st.number_input("SMA 1", min_value=1, value=50, step=5)
     sma2 = st.number_input("SMA 2", min_value=1, value=100, step=5)
     sma3 = st.number_input("SMA 3", min_value=1, value=200, step=5)
     df_plot[f"SMA_{sma1}"] = SMAIndicator(df_plot["NAV"], sma1).sma_indicator()
     df_plot[f"SMA_{sma2}"] = SMAIndicator(df_plot["NAV"], sma2).sma_indicator()
     df_plot[f"SMA_{sma3}"] = SMAIndicator(df_plot["NAV"], sma3).sma_indicator()
+
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_plot["Date"], y=df_plot["NAV"], name="NAV", line=dict(color="cyan")))
     fig.add_trace(go.Scatter(x=df_plot["Date"], y=df_plot[f"SMA_{sma1}"], name=f"SMA {sma1}", line=dict(dash="dot", color="orange")))
     fig.add_trace(go.Scatter(x=df_plot["Date"], y=df_plot[f"SMA_{sma2}"], name=f"SMA {sma2}", line=dict(dash="dot", color="lime")))
     fig.add_trace(go.Scatter(x=df_plot["Date"], y=df_plot[f"SMA_{sma3}"], name=f"SMA {sma3}", line=dict(dash="dot", color="magenta")))
-    # Premier RSI as Area
-    fig.add_trace(go.Scatter(x=df_plot["Date"], y=df_plot["RSI_Premier"], fill='tozeroy', name="Premier RSI",
-                             line=dict(color="green"), opacity=0.3,
-                             hoverinfo="x+y",
-                             fillcolor="rgba(0,255,0,0.2)",
-                             showlegend=True))
-    # MACD
+    fig.add_trace(go.Scatter(x=df_plot["Date"], y=df_plot["RSI_Premier"], fill='tozeroy', name="Premier RSI", line=dict(color="green"), opacity=0.3, hoverinfo="x+y", fillcolor="rgba(0,255,0,0.2)", showlegend=True))
     fig.add_trace(go.Scatter(x=df_plot["Date"], y=df_plot["MACD"], name="MACD", line=dict(color="aqua")))
     fig.add_trace(go.Scatter(x=df_plot["Date"], y=df_plot["Signal"], name="MACD Signal", line=dict(dash="dot", color="white")))
-    fig.update_layout(
-        height=800,
-        title=f"{selected_scheme} - Combined Chart (NAV + Indicators)",
-        template="plotly_dark",
-        hovermode="x unified"
-    )
+    fig.update_layout(height=800, title=f"{selected_scheme} - Combined Chart (NAV + Indicators)", template="plotly_dark", hovermode="x unified")
     st.plotly_chart(fig, use_container_width=True)
+
     if chart_type == "Renko Chart":
         df_renko = df_plot[["Date", "NAV"]].copy()
         df_renko.columns = ["date", "close"]
